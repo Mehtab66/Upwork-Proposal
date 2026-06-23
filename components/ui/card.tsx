@@ -29,28 +29,35 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
     },
     ref
   ) => {
-    const Component = hover ? motion.div : "div";
-    const motionProps = hover
-      ? {
-          whileHover: { y: -4, transition: { duration: 0.2 } },
-        }
-      : {};
+    if (hover) {
+      return (
+        <motion.div
+          ref={ref}
+          whileHover={{ y: -4, transition: { duration: 0.2 } }}
+          className={cn(
+            "rounded-2xl glass glass-hover cursor-default",
+            paddings[padding],
+            className
+          )}
+        >
+          {children}
+        </motion.div>
+      );
+    }
 
     return (
-      <Component
+      <div
         ref={ref}
         className={cn(
           "rounded-2xl",
           glass && "glass",
-          hover && "glass-hover cursor-default",
           paddings[padding],
           className
         )}
-        {...motionProps}
         {...props}
       >
         {children}
-      </Component>
+      </div>
     );
   }
 );

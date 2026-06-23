@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Sparkles, Twitter, Github, Linkedin } from "lucide-react";
+import { Sparkles, Share2, Globe, Mail } from "lucide-react";
 
 const footerLinks = {
   Product: [
@@ -40,7 +40,7 @@ export function Footer() {
               analyze jobs, and create personalized proposals that win clients.
             </p>
             <div className="flex gap-3 mt-6">
-              {[Twitter, Github, Linkedin].map((Icon, i) => (
+              {[Share2, Globe, Mail].map((Icon, i) => (
                 <a
                   key={i}
                   href="#"
