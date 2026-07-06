@@ -1,11 +1,77 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 
 export function SignupForm() {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError("");
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setError(data.error || "Failed to create account.");
+        return;
+      }
+
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError("Account created, but sign in failed. Please log in manually.");
+        router.push("/login");
+        return;
+      }
+
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = () => {
+    void signIn("google", { callbackUrl: "/dashboard" });
+  };
+
   return (
     <Card glass padding="lg" className="w-full max-w-md">
       <div className="mb-6">
@@ -15,30 +81,53 @@ export function SignupForm() {
         </p>
       </div>
 
-      <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-        <Input label="Name" type="text" placeholder="John Doe" required />
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
+        <Input
+          label="Name"
+          type="text"
+          placeholder="John Doe"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          disabled={loading}
+        />
         <Input
           label="Email"
           type="email"
           placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           required
+          disabled={loading}
         />
         <Input
           label="Password"
           type="password"
           placeholder="••••••••"
           hint="Must be at least 8 characters"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           required
+          disabled={loading}
         />
         <Input
           label="Confirm Password"
           type="password"
           placeholder="••••••••"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
           required
+          disabled={loading}
         />
 
-        <Button type="submit" className="w-full" size="lg">
-          Create Account
+        <Button type="submit" className="w-full" size="lg" disabled={loading}>
+          {loading ? "Creating account..." : "Create Account"}
         </Button>
 
         <div className="relative my-4">
@@ -50,7 +139,14 @@ export function SignupForm() {
           </div>
         </div>
 
-        <Button variant="outline" className="w-full" size="lg">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          size="lg"
+          disabled={loading}
+          onClick={handleGoogleSignIn}
+        >
           <svg className="h-4 w-4 mr-1" viewBox="0 0 24 24">
             <path
               fill="currentColor"

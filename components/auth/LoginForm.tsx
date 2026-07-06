@@ -1,11 +1,50 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 
 export function LoginForm() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError("Invalid email or password.");
+        return;
+      }
+
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = () => {
+    void signIn("google", { callbackUrl: "/dashboard" });
+  };
+
   return (
     <Card glass padding="lg" className="w-full max-w-md">
       <div className="mb-6">
@@ -15,18 +54,30 @@ export function LoginForm() {
         </p>
       </div>
 
-      <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
         <Input
           label="Email"
           type="email"
           placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           required
+          disabled={loading}
         />
         <Input
           label="Password"
           type="password"
           placeholder="••••••••"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           required
+          disabled={loading}
         />
 
         <div className="flex justify-end">
@@ -38,8 +89,8 @@ export function LoginForm() {
           </Link>
         </div>
 
-        <Button type="submit" className="w-full" size="lg">
-          Login
+        <Button type="submit" className="w-full" size="lg" disabled={loading}>
+          {loading ? "Signing in..." : "Login"}
         </Button>
 
         <div className="relative my-4">
@@ -51,7 +102,14 @@ export function LoginForm() {
           </div>
         </div>
 
-        <Button variant="outline" className="w-full" size="lg">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          size="lg"
+          disabled={loading}
+          onClick={handleGoogleSignIn}
+        >
           <svg className="h-4 w-4 mr-1" viewBox="0 0 24 24">
             <path
               fill="currentColor"
