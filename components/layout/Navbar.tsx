@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSession } from "next-auth/react";
 import {
   Menu,
   X,
@@ -11,8 +12,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
 import { useTheme } from "@/providers/theme-provider";
-import { cn } from "@/lib/utils";
 
 const navLinks = [
   { href: "#features", label: "Features" },
@@ -143,6 +144,9 @@ interface DashboardNavbarProps {
 
 export function DashboardNavbar({ title, onMenuClick }: DashboardNavbarProps) {
   const { theme, toggleTheme } = useTheme();
+  const { data: session } = useSession();
+  const userName = session?.user?.name || "User";
+  const userImage = session?.user?.image || undefined;
 
   return (
     <header className="sticky top-0 z-30 glass border-b border-border rounded-none mx-0 mt-0">
@@ -179,9 +183,12 @@ export function DashboardNavbar({ title, onMenuClick }: DashboardNavbarProps) {
             </svg>
           </button>
           <Link href="/settings">
-            <div className="h-9 w-9 rounded-full bg-primary-light text-primary font-semibold text-sm flex items-center justify-center ring-2 ring-primary/20 cursor-pointer hover:ring-primary/40 transition-all">
-              JD
-            </div>
+            <Avatar
+              name={userName}
+              src={userImage}
+              size="sm"
+              className="cursor-pointer hover:ring-primary/40 transition-all"
+            />
           </Link>
         </div>
       </div>

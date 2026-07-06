@@ -1,9 +1,20 @@
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import bcrypt from "bcryptjs";
+import { ObjectId } from "mongodb";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import clientPromise from "@/lib/mongodb";
+
+async function userHasPassword(userId: string) {
+  const client = await clientPromise;
+  const user = await client
+    .db()
+    .collection("users")
+    .findOne({ _id: new ObjectId(userId) });
+
+  return Boolean(user?.password);
+}
 
 export const authOptions: NextAuthOptions = {
   adapter: MongoDBAdapter(clientPromise),
@@ -61,12 +72,24 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.name = user.name;
+        token.email = user.email;
+        token.picture = user.image;
       }
+
+      if (token.id && (user || token.hasPassword === undefined)) {
+        token.hasPassword = await userHasPassword(token.id as string);
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
+        session.user.name = token.name as string;
+        session.user.email = token.email as string;
+        session.user.image = token.picture as string;
+        session.user.hasPassword = Boolean(token.hasPassword);
       }
       return session;
     },

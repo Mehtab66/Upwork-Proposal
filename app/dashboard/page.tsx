@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useSession } from "next-auth/react";
 import {
   FolderOpen,
   Code2,
@@ -14,8 +15,12 @@ import { StatsCard } from "@/components/dashboard/StatsCard";
 import { ResumeCard } from "@/components/dashboard/ResumeCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getFirstName } from "@/lib/utils";
 
 export default function DashboardPage() {
+  const { data: session } = useSession();
+  const firstName = getFirstName(session?.user?.name);
+
   return (
     <DashboardLayout>
       <div className="max-w-6xl mx-auto space-y-8">
@@ -28,7 +33,7 @@ export default function DashboardPage() {
             Create your next winning proposal
           </h1>
           <p className="text-muted mt-1">
-            Welcome back, John. Here&apos;s an overview of your profile.
+            Welcome back, {firstName}. Here&apos;s an overview of your profile.
           </p>
         </motion.div>
 

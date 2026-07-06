@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -29,6 +30,13 @@ interface SidebarProps {
 
 export function Sidebar({ open = true, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const userName = session?.user?.name || "User";
+  const userEmail = session?.user?.email || "";
+
+  const handleSignOut = () => {
+    void signOut({ callbackUrl: "/login" });
+  };
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
@@ -75,8 +83,15 @@ export function Sidebar({ open = true, onClose }: SidebarProps) {
         })}
       </nav>
 
-      <div className="p-4 border-t border-border">
-        <button className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all w-full">
+      <div className="p-4 border-t border-border space-y-3">
+        <div className="px-3">
+          <p className="text-sm font-medium text-foreground truncate">{userName}</p>
+          <p className="text-xs text-muted truncate">{userEmail}</p>
+        </div>
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all w-full"
+        >
           <LogOut className="h-4 w-4" />
           Sign Out
         </button>
