@@ -61,7 +61,7 @@ export default function DashboardPage() {
 
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
-            <ResumeCard uploaded completionPercent={85} />
+            <ResumeCard />
           </div>
 
           <Card className="lg:col-span-2">
@@ -104,7 +104,7 @@ export default function DashboardPage() {
                     Ready to apply for a new job?
                   </p>
                   <p className="text-xs text-muted mt-0.5">
-                    Your profile is 85% complete
+                    Upload your resume to unlock personalized proposals
                   </p>
                 </div>
                 <Link href="/generate">

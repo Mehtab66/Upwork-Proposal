@@ -1,11 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import {
-  FileUser,
-  CreditCard,
-  Upload,
-} from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -14,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loading } from "@/components/ui/loading";
 import { AccountSection } from "@/components/settings/AccountSection";
 import { ProfileSection } from "@/components/settings/ProfileSection";
+import { ResumeProfileManager } from "@/components/resume/ResumeProfileManager";
 
 export default function SettingsPage() {
   const { status } = useSession();
@@ -29,7 +26,6 @@ export default function SettingsPage() {
   return (
     <DashboardLayout title="Settings">
       <div className="max-w-3xl mx-auto space-y-8">
-        {/* Profile Section */}
         <motion.section
           id="profile"
           initial={{ opacity: 0, y: 16 }}
@@ -39,7 +35,6 @@ export default function SettingsPage() {
           <ProfileSection />
         </motion.section>
 
-        {/* Resume Section */}
         <motion.section
           id="resume"
           initial={{ opacity: 0, y: 16 }}
@@ -48,37 +43,17 @@ export default function SettingsPage() {
         >
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-xl bg-primary-light flex items-center justify-center">
-                  <FileUser className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Resume</CardTitle>
-                  <CardDescription>Manage your uploaded resume</CardDescription>
-                </div>
-              </div>
+              <CardTitle>Resume</CardTitle>
+              <CardDescription>
+                Upload your resume and let AI extract your skills and experience
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border p-8 text-center">
-                <div className="h-12 w-12 rounded-xl bg-primary-light flex items-center justify-center mb-3">
-                  <FileUser className="h-6 w-6 text-primary" />
-                </div>
-                <p className="text-sm font-medium text-foreground">
-                  No resume uploaded yet
-                </p>
-                <p className="text-xs text-muted mt-1 max-w-sm">
-                  Upload your resume to personalize proposals with your skills and experience.
-                </p>
-              </div>
-              <Button variant="outline" size="sm">
-                <Upload className="h-4 w-4" />
-                Upload Resume
-              </Button>
+            <CardContent>
+              <ResumeProfileManager compact showHeading={false} />
             </CardContent>
           </Card>
         </motion.section>
 
-        {/* Subscription Section */}
         <motion.section
           id="subscription"
           initial={{ opacity: 0, y: 16 }}
@@ -124,7 +99,6 @@ export default function SettingsPage() {
           </Card>
         </motion.section>
 
-        {/* Account Section */}
         <motion.section
           id="account"
           initial={{ opacity: 0, y: 16 }}

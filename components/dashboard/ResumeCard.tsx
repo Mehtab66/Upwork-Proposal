@@ -1,26 +1,44 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FileUser, Upload, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { calculateProfileCompletion, type ResumeProfile } from "@/types/resume";
 
-interface ResumeCardProps {
-  uploaded?: boolean;
-  completionPercent?: number;
-}
+export function ResumeCard() {
+  const [resume, setResume] = useState<ResumeProfile | null>(null);
+  const [loading, setLoading] = useState(true);
 
-export function ResumeCard({
-  uploaded = true,
-  completionPercent = 85,
-}: ResumeCardProps) {
+  useEffect(() => {
+    async function loadResume() {
+      try {
+        const response = await fetch("/api/resume");
+        const data = (await response.json()) as { resume?: ResumeProfile | null };
+
+        if (response.ok) {
+          setResume(data.resume || null);
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadResume();
+  }, []);
+
+  const completionPercent = resume
+    ? calculateProfileCompletion(resume.extracted)
+    : 0;
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Resume Status</CardTitle>
-          {uploaded ? (
+          {loading ? null : resume ? (
             <Badge variant="success">Uploaded</Badge>
           ) : (
             <Badge variant="warning">Not uploaded</Badge>
@@ -28,7 +46,9 @@ export function ResumeCard({
         </div>
       </CardHeader>
       <CardContent>
-        {uploaded ? (
+        {loading ? (
+          <p className="text-sm text-muted">Loading resume status...</p>
+        ) : resume ? (
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-primary-light flex items-center justify-center">
@@ -38,7 +58,7 @@ export function ResumeCard({
                 <p className="text-sm font-medium text-foreground">
                   Resume uploaded
                 </p>
-                <p className="text-xs text-muted">resume_john_doe.pdf</p>
+                <p className="text-xs text-muted">{resume.fileName}</p>
               </div>
             </div>
 
