@@ -26,6 +26,7 @@ function serializeResume(resume: Record<string, unknown> | null | undefined): Re
     fileSize: Number(resume.fileSize || 0),
     mimeType: String(resume.mimeType || ""),
     uploadedAt: new Date(resume.uploadedAt as string | Date).toISOString(),
+    source: resume.source === "upload" ? "upload" : "manual",
     extracted: coerceStoredExtractedResume(resume.extracted),
   };
 }
@@ -115,6 +116,7 @@ export async function POST(request: Request) {
       fileSize: file.size,
       mimeType: file.type || (isPdf ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
       uploadedAt: new Date(),
+      source: "upload" as const,
       extracted,
     };
 

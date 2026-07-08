@@ -73,6 +73,7 @@ export interface ResumeProfile {
   fileSize: number;
   mimeType: string;
   uploadedAt: string;
+  source: "upload" | "manual";
   extracted: ExtractedResume;
 }
 
