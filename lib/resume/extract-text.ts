@@ -1,6 +1,6 @@
 import mammoth from "mammoth";
 
-const MAX_TEXT_LENGTH = 12000;
+const MAX_TEXT_LENGTH = 30000;
 
 export async function extractTextFromResume(
   buffer: Buffer,

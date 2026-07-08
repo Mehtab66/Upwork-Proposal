@@ -1,66 +1,109 @@
 import OpenAI from "openai";
-import type { ExtractedResume } from "@/types/resume";
+import { normalizeExtractedResume } from "@/lib/resume/normalize-extracted";
 
-const emptyResume: ExtractedResume = {
-  summary: "",
-  skills: [],
-  experience: [],
-  projects: [],
-  education: [],
-  links: [],
-};
+const RESUME_EXTRACTION_PROMPT = `You are a resume parser. Read the entire resume text carefully and extract ALL real information from it.
 
-const RESUME_EXTRACTION_PROMPT = `You extract structured resume data from raw resume text.
+Rules:
+- Extract every item that appears in the resume.
+- Put each item in the most appropriate category.
+- Preserve bullet points as separate highlight strings where possible.
+- Do not invent, guess, or add placeholder/example data.
+- If a section is missing from the resume, return empty strings or empty arrays.
+- Include technical skills, soft skills, tools, frameworks, platforms, and domain skills.
+- Work history goes in experience. Personal/portfolio/academic builds go in projects when appropriate.
+- Certifications, languages, awards, and achievements must be captured if present.
+
 Return valid JSON with this exact shape:
 {
+  "contact": {
+    "fullName": "string",
+    "email": "string",
+    "phone": "string",
+    "location": "string",
+    "headline": "string"
+  },
   "summary": "string",
   "skills": ["string"],
+  "skillCategories": {
+    "technical": ["string"],
+    "soft": ["string"],
+    "tools": ["string"],
+    "other": ["string"]
+  },
   "experience": [
     {
       "title": "string",
       "company": "string",
       "period": "string",
-      "description": "string"
+      "location": "string",
+      "description": "string",
+      "highlights": ["string"]
     }
   ],
   "projects": [
     {
       "name": "string",
       "tech": "string",
-      "description": "string"
+      "period": "string",
+      "description": "string",
+      "highlights": ["string"]
     }
   ],
   "education": [
     {
       "degree": "string",
       "institution": "string",
-      "period": "string"
+      "period": "string",
+      "location": "string",
+      "details": "string"
     }
   ],
+  "certifications": [
+    {
+      "name": "string",
+      "issuer": "string",
+      "date": "string"
+    }
+  ],
+  "languages": [
+    {
+      "language": "string",
+      "proficiency": "string"
+    }
+  ],
+  "achievements": ["string"],
   "links": [
     {
       "label": "string",
       "url": "string"
     }
   ]
-}
-Use empty strings or empty arrays when data is missing. Do not invent information.`;
+}`;
 
-export async function parseResumeWithAI(resumeText: string): Promise<ExtractedResume> {
-  if (!process.env.GROK_API_KEY) {
+function getGroqApiKey() {
+  return process.env.GROQ_API_KEY || process.env.GROK_API_KEY;
+}
+
+export async function parseResumeWithAI(resumeText: string) {
+  const apiKey = getGroqApiKey();
+
+  if (!apiKey) {
     throw new Error(
-      "GROK_API_KEY is not configured. Add it to your .env.local file."
+      "GROQ_API_KEY is not configured. Add your Groq key from https://console.groq.com/keys to .env.local."
     );
   }
 
-  const grok = new OpenAI({
-    apiKey: process.env.GROK_API_KEY,
-    baseURL: "https://api.x.ai/v1",
+  const groq = new OpenAI({
+    apiKey,
+    baseURL: "https://api.groq.com/openai/v1",
   });
 
-  const completion = await grok.chat.completions.create({
-    model: process.env.GROK_MODEL || "grok-2-latest",
-    temperature: 0.2,
+  const completion = await groq.chat.completions.create({
+    model:
+      process.env.GROQ_MODEL ||
+      process.env.GROK_MODEL ||
+      "llama-3.3-70b-versatile",
+    temperature: 0.1,
     response_format: { type: "json_object" },
     messages: [
       {
@@ -69,7 +112,7 @@ export async function parseResumeWithAI(resumeText: string): Promise<ExtractedRe
       },
       {
         role: "user",
-        content: resumeText,
+        content: `Parse this resume and extract all information:\n\n${resumeText}`,
       },
     ],
   });
@@ -77,43 +120,9 @@ export async function parseResumeWithAI(resumeText: string): Promise<ExtractedRe
   const content = completion.choices[0]?.message?.content;
 
   if (!content) {
-    throw new Error("Grok did not return resume data.");
+    throw new Error("AI did not return resume data.");
   }
 
-  const parsed = JSON.parse(content) as Partial<ExtractedResume>;
-
-  return {
-    summary: parsed.summary?.trim() || "",
-    skills: Array.isArray(parsed.skills)
-      ? parsed.skills.filter(Boolean).map((skill) => String(skill).trim())
-      : [],
-    experience: Array.isArray(parsed.experience)
-      ? parsed.experience.map((item) => ({
-          title: item.title?.trim() || "",
-          company: item.company?.trim() || "",
-          period: item.period?.trim() || "",
-          description: item.description?.trim() || "",
-        }))
-      : [],
-    projects: Array.isArray(parsed.projects)
-      ? parsed.projects.map((item) => ({
-          name: item.name?.trim() || "",
-          tech: item.tech?.trim() || "",
-          description: item.description?.trim() || "",
-        }))
-      : [],
-    education: Array.isArray(parsed.education)
-      ? parsed.education.map((item) => ({
-          degree: item.degree?.trim() || "",
-          institution: item.institution?.trim() || "",
-          period: item.period?.trim() || "",
-        }))
-      : [],
-    links: Array.isArray(parsed.links)
-      ? parsed.links.map((item) => ({
-          label: item.label?.trim() || "",
-          url: item.url?.trim() || "",
-        }))
-      : emptyResume.links,
-  };
+  const parsed = JSON.parse(content) as Record<string, unknown>;
+  return normalizeExtractedResume(parsed);
 }

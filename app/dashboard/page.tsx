@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import {
   FolderOpen,
@@ -16,10 +17,41 @@ import { ResumeCard } from "@/components/dashboard/ResumeCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getFirstName } from "@/lib/utils";
+import {
+  calculateProfileCompletion,
+  getTotalSkillsCount,
+  type ResumeProfile,
+} from "@/types/resume";
 
 export default function DashboardPage() {
   const { data: session } = useSession();
   const firstName = getFirstName(session?.user?.name);
+  const [resume, setResume] = useState<ResumeProfile | null>(null);
+
+  useEffect(() => {
+    async function loadResume() {
+      try {
+        const response = await fetch("/api/resume");
+        const data = (await response.json()) as { resume?: ResumeProfile | null };
+
+        if (response.ok) {
+          setResume(data.resume || null);
+        }
+      } catch {
+        setResume(null);
+      }
+    }
+
+    void loadResume();
+  }, []);
+
+  const extracted = resume?.extracted;
+  const projectsCount = extracted?.projects.length ?? 0;
+  const skillsCount = extracted ? getTotalSkillsCount(extracted) : 0;
+  const experienceCount = extracted?.experience.length ?? 0;
+  const completionPercent = extracted
+    ? calculateProfileCompletion(extracted)
+    : 0;
 
   return (
     <DashboardLayout>
@@ -40,21 +72,33 @@ export default function DashboardPage() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <StatsCard
             title="Projects Extracted"
-            value={12}
+            value={projectsCount}
             icon={FolderOpen}
-            trend="+3 from last upload"
+            subtitle={
+              resume
+                ? "From your uploaded resume"
+                : "Upload a resume to extract projects"
+            }
           />
           <StatsCard
             title="Skills Detected"
-            value={24}
+            value={skillsCount}
             icon={Code2}
-            subtitle="Across all categories"
+            subtitle={
+              resume
+                ? `${experienceCount} experience entries found`
+                : "No resume uploaded yet"
+            }
           />
           <StatsCard
-            title="Proposals Generated"
-            value={8}
+            title="Profile Completion"
+            value={`${completionPercent}%`}
             icon={FileText}
-            trend="+2 this week"
+            subtitle={
+              resume
+                ? "Based on extracted resume data"
+                : "Upload your resume to get started"
+            }
             className="sm:col-span-2 lg:col-span-1"
           />
         </div>
@@ -101,15 +145,17 @@ export default function DashboardPage() {
               <div className="mt-6 flex items-center justify-between p-4 rounded-xl bg-primary-light/50 border border-primary/10">
                 <div>
                   <p className="text-sm font-semibold text-foreground">
-                    Ready to apply for a new job?
+                    {resume ? "Your resume profile is ready" : "Upload your resume first"}
                   </p>
                   <p className="text-xs text-muted mt-0.5">
-                    Upload your resume to unlock personalized proposals
+                    {resume
+                      ? `${skillsCount} skills and ${projectsCount} projects extracted from your resume`
+                      : "Upload your resume to unlock personalized proposals"}
                   </p>
                 </div>
-                <Link href="/generate">
+                <Link href={resume ? "/generate" : "/create-profile"}>
                   <Button size="sm">
-                    Start Now
+                    {resume ? "Start Now" : "Upload Resume"}
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>

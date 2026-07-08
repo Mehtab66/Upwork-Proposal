@@ -126,7 +126,7 @@ export function ResumeProfileManager({
             Upload Your Resume
           </h2>
           <p className="text-sm text-muted mt-1">
-            AI will extract your skills, experience, education, and portfolio links automatically.
+            AI will read your full resume and categorize contact info, skills, experience, projects, education, certifications, languages, achievements, and links.
           </p>
         </div>
       )}
@@ -202,7 +202,7 @@ export function ResumeProfileManager({
             <Card className="py-16">
               <Loading message="AI is analyzing your resume..." size="lg" />
               <p className="text-center text-xs text-muted mt-4">
-                Extracting skills, experience, education, and portfolio links...
+                Extracting and categorizing all resume information...
               </p>
             </Card>
           </motion.div>

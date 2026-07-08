@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/session";
 import clientPromise from "@/lib/mongodb";
 import { extractTextFromResume } from "@/lib/resume/extract-text";
 import { parseResumeWithAI } from "@/lib/resume/parse-resume";
+import { coerceStoredExtractedResume } from "@/lib/resume/normalize-extracted";
 import type { ResumeProfile } from "@/types/resume";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -25,7 +26,7 @@ function serializeResume(resume: Record<string, unknown> | null | undefined): Re
     fileSize: Number(resume.fileSize || 0),
     mimeType: String(resume.mimeType || ""),
     uploadedAt: new Date(resume.uploadedAt as string | Date).toISOString(),
-    extracted: resume.extracted as ResumeProfile["extracted"],
+    extracted: coerceStoredExtractedResume(resume.extracted),
   };
 }
 
