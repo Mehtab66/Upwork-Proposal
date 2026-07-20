@@ -21,6 +21,7 @@ import {
   calculateProfileCompletion,
   getTotalSkillsCount,
   type ResumeProfile,
+  type ResumeResponse,
 } from "@/types/resume";
 
 export default function DashboardPage() {
@@ -32,7 +33,7 @@ export default function DashboardPage() {
     async function loadResume() {
       try {
         const response = await fetch("/api/resume");
-        const data = (await response.json()) as { resume?: ResumeProfile | null };
+        const data = (await response.json()) as ResumeResponse;
 
         if (response.ok) {
           setResume(data.resume || null);

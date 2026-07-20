@@ -28,7 +28,13 @@ export function LoginForm() {
       });
 
       if (result?.error) {
-        setError("Invalid email or password.");
+        if (result.error === "CredentialsSignin") {
+          setError(
+            "Invalid email or password. If you signed up with Google, use Continue with Google instead."
+          );
+        } else {
+          setError("Invalid email or password.");
+        }
         return;
       }
 
@@ -82,8 +88,8 @@ export function LoginForm() {
 
         <div className="flex justify-end">
           <Link
-            href="#"
-            className="text-sm text-primary hover:text-primary-hover font-medium transition-colors"
+            href="/forgot-password"
+            className="text-sm font-medium text-primary transition-colors hover:text-primary-hover"
           >
             Forgot password?
           </Link>

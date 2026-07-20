@@ -69,6 +69,8 @@ export interface ExtractedResume {
 }
 
 export interface ResumeProfile {
+  id: string;
+  label: string;
   fileName: string;
   fileSize: number;
   mimeType: string;
@@ -78,6 +80,8 @@ export interface ResumeProfile {
 }
 
 export interface ResumeResponse {
+  resumes: ResumeProfile[];
+  activeResumeId: string | null;
   resume: ResumeProfile | null;
 }
 

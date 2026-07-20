@@ -3,21 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 
-type SignupStep = "details" | "otp";
+type ForgotStep = "email" | "reset";
 
-export function SignupForm() {
+export function ForgotPasswordForm() {
   const router = useRouter();
-  const [step, setStep] = useState<SignupStep>("details");
-  const [name, setName] = useState("");
+  const [step, setStep] = useState<ForgotStep>("email");
   const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
@@ -36,7 +34,37 @@ export function SignupForm() {
     }, 1000);
   };
 
-  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSendCode = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = (await response.json()) as { error?: string; message?: string };
+
+      if (!response.ok) {
+        setError(data.error || "Failed to send reset code.");
+        return;
+      }
+
+      setStep("reset");
+      setSuccess(data.message || "Reset code sent to your email.");
+      startResendCooldown();
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setSuccess("");
@@ -54,63 +82,26 @@ export function SignupForm() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/register", {
+      const response = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({
+          email,
+          otp,
+          password,
+          confirmPassword,
+        }),
       });
 
       const data = (await response.json()) as { error?: string; message?: string };
 
       if (!response.ok) {
-        setError(data.error || "Failed to send verification code.");
+        setError(data.error || "Failed to reset password.");
         return;
       }
 
-      setStep("otp");
-      setSuccess(data.message || "Verification code sent to your email.");
-      startResendCooldown();
-    } catch {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerify = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
-    setLoading(true);
-
-    try {
-      const response = await fetch("/api/auth/register/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp }),
-      });
-
-      const data = (await response.json()) as { error?: string; message?: string };
-
-      if (!response.ok) {
-        setError(data.error || "Invalid verification code.");
-        return;
-      }
-
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        setSuccess("Account verified. Please sign in.");
-        router.push("/login");
-        return;
-      }
-
-      router.push("/dashboard");
-      router.refresh();
+      setSuccess(data.message || "Password updated successfully.");
+      router.push("/login");
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -128,8 +119,8 @@ export function SignupForm() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/register/resend", {
-        method: "POST",
+      const response = await fetch("/api/auth/reset-password", {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
@@ -137,11 +128,11 @@ export function SignupForm() {
       const data = (await response.json()) as { error?: string; message?: string };
 
       if (!response.ok) {
-        setError(data.error || "Failed to resend verification code.");
+        setError(data.error || "Failed to resend reset code.");
         return;
       }
 
-      setSuccess(data.message || "A new verification code was sent.");
+      setSuccess(data.message || "A new reset code was sent.");
       startResendCooldown();
     } catch {
       setError("Something went wrong. Please try again.");
@@ -150,18 +141,14 @@ export function SignupForm() {
     }
   };
 
-  const handleGoogleSignIn = () => {
-    void signIn("google", { callbackUrl: "/dashboard" });
-  };
-
   return (
     <Card glass padding="lg" className="w-full max-w-md">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-foreground">Create your account</h2>
+        <h2 className="text-2xl font-bold text-foreground">Reset your password</h2>
         <p className="mt-1 text-sm text-muted">
-          {step === "details"
-            ? "Start generating winning proposals today"
-            : `Enter the 6-digit code sent to ${email}`}
+          {step === "email"
+            ? "We will email you a one-time verification code"
+            : `Enter the code sent to ${email} and choose a new password`}
         </p>
       </div>
 
@@ -177,17 +164,8 @@ export function SignupForm() {
         </div>
       )}
 
-      {step === "details" ? (
-        <form className="space-y-4" onSubmit={handleRegister}>
-          <Input
-            label="Name"
-            type="text"
-            placeholder="John Doe"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            disabled={loading}
-          />
+      {step === "email" ? (
+        <form className="space-y-4" onSubmit={handleSendCode}>
           <Input
             label="Email"
             type="email"
@@ -197,52 +175,13 @@ export function SignupForm() {
             required
             disabled={loading}
           />
-          <Input
-            label="Password"
-            type="password"
-            placeholder="••••••••"
-            hint="Must be at least 8 characters"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            disabled={loading}
-          />
-          <Input
-            label="Confirm Password"
-            type="password"
-            placeholder="••••••••"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-            disabled={loading}
-          />
 
           <Button type="submit" className="w-full" size="lg" disabled={loading}>
-            {loading ? "Sending code..." : "Continue with Email"}
-          </Button>
-
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-card px-3 text-muted">or continue with</span>
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            size="lg"
-            disabled={loading}
-            onClick={handleGoogleSignIn}
-          >
-            Continue with Google
+            {loading ? "Sending code..." : "Send Reset Code"}
           </Button>
         </form>
       ) : (
-        <form className="space-y-4" onSubmit={handleVerify}>
+        <form className="space-y-4" onSubmit={handleResetPassword}>
           <Input
             label="Verification code"
             type="text"
@@ -253,11 +192,28 @@ export function SignupForm() {
             onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
             required
             disabled={loading}
-            hint="Check your inbox for the 6-digit OTP"
+          />
+          <Input
+            label="New password"
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            disabled={loading}
+          />
+          <Input
+            label="Confirm new password"
+            type="password"
+            placeholder="••••••••"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            disabled={loading}
           />
 
           <Button type="submit" className="w-full" size="lg" disabled={loading}>
-            {loading ? "Verifying..." : "Verify & Create Account"}
+            {loading ? "Updating password..." : "Update Password"}
           </Button>
 
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -278,25 +234,27 @@ export function SignupForm() {
               className="w-full"
               disabled={loading}
               onClick={() => {
-                setStep("details");
+                setStep("email");
                 setOtp("");
+                setPassword("");
+                setConfirmPassword("");
                 setError("");
                 setSuccess("");
               }}
             >
-              Edit details
+              Change email
             </Button>
           </div>
         </form>
       )}
 
       <p className="mt-6 text-center text-sm text-muted">
-        Already have an account?{" "}
+        Remember your password?{" "}
         <Link
           href="/login"
           className="font-semibold text-primary transition-colors hover:text-primary-hover"
         >
-          Sign in
+          Back to login
         </Link>
       </p>
     </Card>

@@ -1,6 +1,9 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
+import { sendEmail } from "@/lib/email/mailer";
+import { createAndSendOtpRecord } from "@/lib/email/otp";
+import { buildSignupOtpEmail } from "@/lib/email/templates";
 
 export async function POST(request: Request) {
   try {
@@ -32,26 +35,36 @@ export async function POST(request: Request) {
       );
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    await users.insertOne({
-      name: name.trim(),
+    const passwordHash = await bcrypt.hash(password, 12);
+    const otp = await createAndSendOtpRecord({
       email: normalizedEmail,
-      password: hashedPassword,
-      emailVerified: null,
-      image: null,
-      createdAt: new Date(),
+      purpose: "signup",
+      signupData: {
+        name: name.trim(),
+        passwordHash,
+      },
     });
 
-    return NextResponse.json(
-      { message: "Account created successfully." },
-      { status: 201 }
-    );
+    const template = buildSignupOtpEmail(name.trim(), otp);
+    await sendEmail({
+      to: normalizedEmail,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+    });
+
+    return NextResponse.json({
+      message: "Verification code sent to your email.",
+      email: normalizedEmail,
+    });
   } catch (error) {
-    console.error("Registration error:", error);
-    return NextResponse.json(
-      { error: "Something went wrong. Please try again." },
-      { status: 500 }
-    );
+    console.error("Registration OTP error:", error);
+
+    const message =
+      error instanceof Error && error.message.includes("Email is not configured")
+        ? error.message
+        : "Something went wrong. Please try again.";
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

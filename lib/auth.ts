@@ -31,7 +31,7 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Invalid credentials");
+          return null;
         }
 
         const client = await clientPromise;
@@ -41,7 +41,7 @@ export const authOptions: NextAuthOptions = {
           .findOne({ email: credentials.email.toLowerCase().trim() });
 
         if (!user?.password) {
-          throw new Error("Invalid credentials");
+          return null;
         }
 
         const isValid = await bcrypt.compare(
@@ -50,7 +50,7 @@ export const authOptions: NextAuthOptions = {
         );
 
         if (!isValid) {
-          throw new Error("Invalid credentials");
+          return null;
         }
 
         return {
@@ -67,6 +67,7 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/login",
+    error: "/auth/error",
   },
   callbacks: {
     async jwt({ token, user }) {

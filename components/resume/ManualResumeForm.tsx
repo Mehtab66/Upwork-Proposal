@@ -241,7 +241,7 @@ export function ManualResumeForm({
         </CardHeader>
         <CardContent className="space-y-4">
           {form.experience.length === 0 && (
-            <p className="text-sm text-muted">Add at least one job for a stronger ATS score.</p>
+            <p className="text-sm text-muted">Add at least one job to strengthen your profile.</p>
           )}
           {form.experience.map((job, index) => (
             <div key={`job-${index}`} className="rounded-xl border border-border p-4 space-y-3">

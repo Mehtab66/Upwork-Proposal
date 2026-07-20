@@ -120,10 +120,11 @@ export function ExtractedResumeView({ resume }: ExtractedResumeViewProps) {
             Resume processed successfully
           </p>
           <p className="text-xs text-muted">
-            {resume.fileName} · Extracted {stats.skills} skills,{" "}
-            {stats.experience} jobs, {stats.projects} projects, {stats.education}{" "}
-            education entries, {stats.certifications} certifications, and{" "}
-            {stats.languages} languages
+            {resume.label} ·{" "}
+            {resume.source === "manual" ? "Manual profile" : resume.fileName} ·
+            Extracted {stats.skills} skills, {stats.experience} jobs,{" "}
+            {stats.projects} projects, {stats.education} education entries,{" "}
+            {stats.certifications} certifications, and {stats.languages} languages
           </p>
         </div>
       </div>

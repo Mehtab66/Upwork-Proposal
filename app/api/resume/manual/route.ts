@@ -1,28 +1,15 @@
 export const runtime = "nodejs";
 
-import { ObjectId } from "mongodb";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/session";
-import clientPromise from "@/lib/mongodb";
 import { coerceStoredExtractedResume } from "@/lib/resume/normalize-extracted";
-import type { ExtractedResume, ResumeProfile } from "@/types/resume";
-
-function serializeResume(
-  resume: Record<string, unknown> | null | undefined
-): ResumeProfile | null {
-  if (!resume || typeof resume !== "object") {
-    return null;
-  }
-
-  return {
-    fileName: String(resume.fileName || ""),
-    fileSize: Number(resume.fileSize || 0),
-    mimeType: String(resume.mimeType || ""),
-    uploadedAt: new Date(resume.uploadedAt as string | Date).toISOString(),
-    source: resume.source === "upload" ? "upload" : "manual",
-    extracted: coerceStoredExtractedResume(resume.extracted),
-  };
-}
+import {
+  buildResumeListResponse,
+  buildStoredResume,
+  getUserResumeState,
+  persistUserResumeState,
+} from "@/lib/resume/user-resumes";
+import type { ExtractedResume } from "@/types/resume";
 
 export async function PUT(request: Request) {
   try {
@@ -31,7 +18,12 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
-    const body = (await request.json()) as { extracted?: ExtractedResume };
+    const body = (await request.json()) as {
+      extracted?: ExtractedResume;
+      resumeId?: string;
+      label?: string;
+    };
+
     if (!body.extracted) {
       return NextResponse.json(
         { error: "Resume data is required." },
@@ -40,33 +32,66 @@ export async function PUT(request: Request) {
     }
 
     const extracted = coerceStoredExtractedResume(body.extracted);
+    const state = await getUserResumeState(user.id);
 
-    const resumeProfile = {
+    if (body.resumeId) {
+      const existing = state.resumes.find(
+        (resume) => resume.id === body.resumeId
+      );
+
+      if (!existing) {
+        return NextResponse.json({ error: "Resume not found." }, { status: 404 });
+      }
+
+      const resumes = state.resumes.map((resume) =>
+        resume.id === body.resumeId
+          ? {
+              ...resume,
+              label: body.label?.trim() || resume.label,
+              extracted,
+              uploadedAt: new Date().toISOString(),
+            }
+          : resume
+      );
+
+      await persistUserResumeState(
+        user.id,
+        resumes,
+        state.activeResumeId
+      );
+
+      const activeResume =
+        resumes.find((resume) => resume.id === state.activeResumeId) || null;
+
+      return NextResponse.json({
+        message: "Manual resume updated successfully.",
+        ...buildResumeListResponse({
+          resumes,
+          activeResumeId: state.activeResumeId,
+          activeResume,
+        }),
+      });
+    }
+
+    const newResume = buildStoredResume({
+      label: body.label?.trim() || undefined,
       fileName: "Manual Resume Profile",
       fileSize: 0,
       mimeType: "manual",
-      uploadedAt: new Date(),
-      source: "manual" as const,
+      source: "manual",
       extracted,
-    };
+    });
 
-    const client = await clientPromise;
-    await client
-      .db()
-      .collection("users")
-      .updateOne(
-        { _id: new ObjectId(user.id) },
-        {
-          $set: {
-            resumeProfile,
-            updatedAt: new Date(),
-          },
-        }
-      );
+    const resumes = [...state.resumes, newResume];
+    await persistUserResumeState(user.id, resumes, newResume.id);
 
     return NextResponse.json({
       message: "Manual resume saved successfully.",
-      resume: serializeResume(resumeProfile),
+      ...buildResumeListResponse({
+        resumes,
+        activeResumeId: newResume.id,
+        activeResume: newResume,
+      }),
     });
   } catch (error) {
     console.error("Save manual resume error:", error);
