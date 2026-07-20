@@ -18,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getFirstName } from "@/lib/utils";
 import {
-  calculateProfileCompletion,
   getTotalSkillsCount,
   type ResumeProfile,
   type ResumeResponse,
@@ -28,15 +27,26 @@ export default function DashboardPage() {
   const { data: session } = useSession();
   const firstName = getFirstName(session?.user?.name);
   const [resume, setResume] = useState<ResumeProfile | null>(null);
+  const [proposalsThisMonth, setProposalsThisMonth] = useState(0);
 
   useEffect(() => {
     async function loadResume() {
       try {
-        const response = await fetch("/api/resume");
-        const data = (await response.json()) as ResumeResponse;
+        const [resumeResponse, proposalsResponse] = await Promise.all([
+          fetch("/api/resume"),
+          fetch("/api/proposals"),
+        ]);
+        const data = (await resumeResponse.json()) as ResumeResponse;
+        const proposalsData = (await proposalsResponse.json()) as {
+          usage?: { usedThisMonth: number };
+        };
 
-        if (response.ok) {
+        if (resumeResponse.ok) {
           setResume(data.resume || null);
+        }
+
+        if (proposalsResponse.ok && proposalsData.usage) {
+          setProposalsThisMonth(proposalsData.usage.usedThisMonth);
         }
       } catch {
         setResume(null);
@@ -50,9 +60,6 @@ export default function DashboardPage() {
   const projectsCount = extracted?.projects.length ?? 0;
   const skillsCount = extracted ? getTotalSkillsCount(extracted) : 0;
   const experienceCount = extracted?.experience.length ?? 0;
-  const completionPercent = extracted
-    ? calculateProfileCompletion(extracted)
-    : 0;
 
   return (
     <DashboardLayout>
@@ -92,15 +99,14 @@ export default function DashboardPage() {
             }
           />
           <StatsCard
-            title="Profile Completion"
-            value={`${completionPercent}%`}
-            icon={FileText}
+            title="Proposals This Month"
+            value={proposalsThisMonth}
+            icon={Sparkles}
             subtitle={
               resume
-                ? "Based on extracted resume data"
-                : "Upload your resume to get started"
+                ? "Generated with your active resume"
+                : "Upload a resume to start generating"
             }
-            className="sm:col-span-2 lg:col-span-1"
           />
         </div>
 

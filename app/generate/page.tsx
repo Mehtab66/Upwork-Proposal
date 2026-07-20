@@ -1,115 +1,569 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Copy, RefreshCw, Sparkles, Check } from "lucide-react";
+import {
+  Copy,
+  RefreshCw,
+  Sparkles,
+  Check,
+  AlertCircle,
+  Lightbulb,
+  Target,
+  MessageCircleQuestion,
+  Pencil,
+  Save,
+  Bold,
+  TriangleAlert,
+} from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { CoverLetterEditor } from "@/components/proposal/CoverLetterEditor";
+import { CoverLetterPreview } from "@/components/proposal/CoverLetterPreview";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/input";
+import { Textarea, Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { AILoading } from "@/components/ui/loading";
-
-const sampleProposal = `Hi there,
-
-I came across your job posting for a Full-Stack Developer to build a SaaS dashboard, and I'm excited about the opportunity. With over 7 years of experience in React, Node.js, and TypeScript, I've built similar platforms that serve thousands of users.
-
-In my recent project at TechCorp, I led the development of an analytics dashboard using Next.js and PostgreSQL, achieving 99.9% uptime and reducing load times by 40%. I also built an e-commerce platform handling 10k+ products with Stripe integration.
-
-I'm particularly drawn to your emphasis on real-time data visualization — this aligns perfectly with my SaaS Dashboard project where I implemented live charts using D3.js and WebSockets.
-
-I'd love to discuss your requirements in more detail. I'm available to start immediately and can commit 30+ hours per week.
-
-Looking forward to hearing from you!
-
-Best regards,
-John Doe`;
+import {
+  normalizeBoldPhrases,
+  plainTextForUpwork,
+  sanitizeCoverLetter,
+} from "@/lib/proposal/format-cover-letter";
+import type { ResumeProfile, ResumeResponse } from "@/types/resume";
+import type {
+  ProfileMatchAnalysis,
+  ProposalMode,
+  StoredProposal,
+} from "@/types/proposal";
 
 type GenerateState = "idle" | "generating" | "complete";
 
+interface ProposalAnalysis {
+  clientNeedsSummary: string;
+  matchedHighlights: string[];
+  suggestedQuestions: string[];
+  boldPhrases: string[];
+  profileMatch: ProfileMatchAnalysis | null;
+}
+
 export default function GeneratePage() {
+  const { data: session } = useSession();
+  const [mode, setMode] = useState<ProposalMode>("resume");
   const [jobDescription, setJobDescription] = useState("");
+  const [clientName, setClientName] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [genericHeadline, setGenericHeadline] = useState("");
+  const [genericSkills, setGenericSkills] = useState("");
+  const [genericBackground, setGenericBackground] = useState("");
   const [generateState, setGenerateState] = useState<GenerateState>("idle");
   const [proposal, setProposal] = useState("");
+  const [draftProposal, setDraftProposal] = useState("");
+  const [boldPhrases, setBoldPhrases] = useState<string[]>([]);
+  const [draftBoldPhrases, setDraftBoldPhrases] = useState<string[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentProposal, setCurrentProposal] = useState<StoredProposal | null>(
+    null
+  );
+  const [analysis, setAnalysis] = useState<ProposalAnalysis | null>(null);
+  const [activeResume, setActiveResume] = useState<ResumeProfile | null>(null);
+  const [usageRemaining, setUsageRemaining] = useState<number | null>(null);
+  const [usageLimit, setUsageLimit] = useState(3);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [copied, setCopied] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [highlighting, setHighlighting] = useState(false);
 
-  const handleGenerate = () => {
-    if (!jobDescription.trim()) return;
+  useEffect(() => {
+    async function loadContext() {
+      try {
+        const [resumeRes, proposalsRes] = await Promise.all([
+          fetch("/api/resume"),
+          fetch("/api/proposals"),
+        ]);
+
+        const resumeData = (await resumeRes.json()) as ResumeResponse;
+        const proposalsData = (await proposalsRes.json()) as {
+          usage?: { remaining: number; monthlyLimit: number };
+        };
+
+        if (resumeRes.ok) {
+          setActiveResume(resumeData.resume || null);
+        }
+
+        if (proposalsRes.ok && proposalsData.usage) {
+          setUsageRemaining(proposalsData.usage.remaining);
+          setUsageLimit(proposalsData.usage.monthlyLimit);
+        }
+      } finally {
+        setLoadingProfile(false);
+      }
+    }
+
+    void loadContext();
+  }, []);
+
+  const runGenerate = async (regenerateProposalId?: string) => {
+    if (!jobDescription.trim()) {
+      return;
+    }
+
+    setError("");
+    setSuccess("");
     setGenerateState("generating");
     setProposal("");
-    setTimeout(() => {
-      setProposal(sampleProposal);
-      setGenerateState("complete");
-    }, 3000);
-  };
+    setDraftProposal("");
+    setAnalysis(null);
+    setIsEditing(false);
 
-  const handleRegenerate = () => {
-    setGenerateState("generating");
-    setTimeout(() => {
-      setProposal(sampleProposal);
+    try {
+      const response = await fetch("/api/proposals/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobDescription,
+          clientName: clientName.trim() || undefined,
+          jobTitle: jobTitle.trim() || undefined,
+          regenerateProposalId,
+          mode,
+          genericProfile:
+            mode === "generic"
+              ? {
+                  freelancerName: session?.user?.name || "Freelancer",
+                  professionalHeadline: genericHeadline,
+                  skillsSummary: genericSkills,
+                  experienceSummary: genericBackground,
+                }
+              : undefined,
+        }),
+      });
+
+      const data = (await response.json()) as {
+        error?: string;
+        proposal?: StoredProposal;
+        analysis?: ProposalAnalysis;
+        usage?: { remaining: number; monthlyLimit: number };
+      };
+
+      if (!response.ok || !data.proposal) {
+        setError(data.error || "Failed to generate proposal.");
+        setGenerateState(currentProposal ? "complete" : "idle");
+        return;
+      }
+
+      const letter = sanitizeCoverLetter(data.proposal.coverLetter);
+      const phrases = normalizeBoldPhrases(
+        letter,
+        data.proposal.boldPhrases?.length
+          ? data.proposal.boldPhrases
+          : data.analysis?.boldPhrases || []
+      );
+
+      setProposal(letter);
+      setDraftProposal(letter);
+      setBoldPhrases(phrases);
+      setDraftBoldPhrases(phrases);
+      setCurrentProposal({
+        ...data.proposal,
+        coverLetter: letter,
+        boldPhrases: phrases,
+      });
+      setAnalysis(data.analysis || null);
       setGenerateState("complete");
-    }, 2500);
+
+      if (data.usage) {
+        setUsageRemaining(data.usage.remaining);
+        setUsageLimit(data.usage.monthlyLimit);
+      }
+    } catch {
+      setError("Something went wrong while generating your proposal.");
+      setGenerateState(currentProposal ? "complete" : "idle");
+    }
   };
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(proposal);
+    const text = isEditing ? draftProposal : proposal;
+    await navigator.clipboard.writeText(plainTextForUpwork(text));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const saveEdits = async () => {
+    if (!currentProposal) {
+      return;
+    }
+
+    setSavingEdit(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const letter = sanitizeCoverLetter(draftProposal);
+      const phrases = normalizeBoldPhrases(letter, draftBoldPhrases);
+
+      const response = await fetch(`/api/proposals/${currentProposal.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          coverLetter: letter,
+          boldPhrases: phrases,
+        }),
+      });
+
+      const data = (await response.json()) as {
+        error?: string;
+        proposal?: StoredProposal;
+      };
+
+      if (!response.ok || !data.proposal) {
+        setError(data.error || "Failed to save edits.");
+        return;
+      }
+
+      const savedLetter = sanitizeCoverLetter(data.proposal.coverLetter);
+      const savedPhrases = normalizeBoldPhrases(
+        savedLetter,
+        data.proposal.boldPhrases || phrases
+      );
+
+      setProposal(savedLetter);
+      setDraftProposal(savedLetter);
+      setBoldPhrases(savedPhrases);
+      setDraftBoldPhrases(savedPhrases);
+      setCurrentProposal({
+        ...data.proposal,
+        coverLetter: savedLetter,
+        boldPhrases: savedPhrases,
+      });
+      setIsEditing(false);
+      setSuccess("Proposal saved.");
+    } catch {
+      setError("Something went wrong while saving.");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const highlightKeyPoints = async () => {
+    const source = sanitizeCoverLetter(isEditing ? draftProposal : proposal);
+
+    if (!source.trim()) {
+      return;
+    }
+
+    setHighlighting(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch("/api/proposals/highlight", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ coverLetter: source }),
+      });
+
+      const data = (await response.json()) as {
+        error?: string;
+        coverLetter?: string;
+        boldPhrases?: string[];
+      };
+
+      if (!response.ok || !data.boldPhrases) {
+        setError(data.error || "Failed to highlight key points.");
+        return;
+      }
+
+      const letter = sanitizeCoverLetter(data.coverLetter || source);
+      const phrases = normalizeBoldPhrases(letter, data.boldPhrases);
+
+      setProposal(letter);
+      setDraftProposal(letter);
+      setBoldPhrases(phrases);
+      setDraftBoldPhrases(phrases);
+
+      if (currentProposal) {
+        const saveRes = await fetch(`/api/proposals/${currentProposal.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            coverLetter: letter,
+            boldPhrases: phrases,
+          }),
+        });
+
+        if (saveRes.ok) {
+          const saved = (await saveRes.json()) as { proposal?: StoredProposal };
+          if (saved.proposal) {
+            setCurrentProposal(saved.proposal);
+          }
+        }
+      }
+
+      setSuccess("Key points highlighted in preview.");
+    } catch {
+      setError("Something went wrong while highlighting.");
+    } finally {
+      setHighlighting(false);
+    }
+  };
+
+  const markAsSent = async () => {
+    if (!currentProposal) {
+      return;
+    }
+
+    const response = await fetch(`/api/proposals/${currentProposal.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "sent" }),
+    });
+
+    if (response.ok) {
+      const data = (await response.json()) as { proposal?: StoredProposal };
+      if (data.proposal) {
+        setCurrentProposal(data.proposal);
+      }
+    }
+  };
+
+  const genericReady =
+    genericHeadline.trim() ||
+    genericSkills.trim() ||
+    genericBackground.trim();
+
+  const canGenerate =
+    jobDescription.trim().length >= 40 &&
+    generateState !== "generating" &&
+    (usageRemaining === null || usageRemaining > 0 || Boolean(currentProposal)) &&
+    (mode === "generic" ? genericReady : Boolean(activeResume));
+
+  const profileMatch = analysis?.profileMatch || currentProposal?.profileMatch;
+
   return (
     <DashboardLayout title="Generate Proposal">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid lg:grid-cols-2 gap-6 h-[calc(100vh-8rem)]">
-          {/* Left - Input */}
+      <div className="mx-auto max-w-7xl space-y-4">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={mode === "resume" ? "primary" : "outline"}
+            onClick={() => setMode("resume")}
+          >
+            Use Active Resume
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={mode === "generic" ? "primary" : "outline"}
+            onClick={() => setMode("generic")}
+          >
+            Generic Proposal (No CV)
+          </Button>
+        </div>
+
+        {!loadingProfile && mode === "resume" && !activeResume ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span>
+                No active resume found. Upload one or switch to Generic mode.
+              </span>
+              <Link href="/create-profile">
+                <Button size="sm" variant="secondary">
+                  Set Up Resume
+                </Button>
+              </Link>
+            </div>
+          </div>
+        ) : null}
+
+        {activeResume && mode === "resume" ? (
+          <Badge variant="outline">Active resume: {activeResume.label}</Badge>
+        ) : null}
+
+        {usageRemaining !== null ? (
+          <Badge variant="primary">
+            {usageRemaining} of {usageLimit} proposals left this month
+          </Badge>
+        ) : null}
+
+        {profileMatch?.isMismatch && profileMatch.warningMessage ? (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div className="flex items-start gap-2">
+              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p className="font-semibold">Profile mismatch detected</p>
+                <p className="mt-1">{profileMatch.warningMessage}</p>
+                {profileMatch.recommendation ? (
+                  <p className="mt-2 text-amber-800">{profileMatch.recommendation}</p>
+                ) : null}
+                <p className="mt-2 text-xs text-amber-800/90">
+                  Match score: {profileMatch.matchScore}/100 · Your focus:{" "}
+                  {profileMatch.resumeFocus || "—"} · Job focus:{" "}
+                  {profileMatch.jobFocus || "—"}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {error ? (
+          <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        ) : null}
+
+        {success ? (
+          <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            {success}
+          </div>
+        ) : null}
+
+        <div className="grid min-h-[640px] gap-6 lg:grid-cols-2">
           <Card className="flex flex-col">
             <CardHeader>
-              <CardTitle>Job Description</CardTitle>
+              <CardTitle>Job Details</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col flex-1 gap-4">
+            <CardContent className="flex flex-1 flex-col gap-4 overflow-auto">
+              {mode === "generic" ? (
+                <>
+                  <Input
+                    label="Professional headline"
+                    placeholder="e.g. Video Editor & Motion Designer"
+                    value={genericHeadline}
+                    onChange={(e) => setGenericHeadline(e.target.value)}
+                  />
+                  <Textarea
+                    label="Skills summary"
+                    placeholder="Premiere Pro, After Effects, color grading, short-form ads..."
+                    value={genericSkills}
+                    onChange={(e) => setGenericSkills(e.target.value)}
+                    className="min-h-[100px]"
+                  />
+                  <Textarea
+                    label="Background & results"
+                    placeholder="Briefly describe experience and outcomes relevant to this job..."
+                    value={genericBackground}
+                    onChange={(e) => setGenericBackground(e.target.value)}
+                    className="min-h-[120px]"
+                  />
+                </>
+              ) : null}
+
+              <Input
+                label="Client name (optional)"
+                placeholder="Use if mentioned in the job post"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+              />
+              <Input
+                label="Job title (optional)"
+                placeholder="e.g. Full-Stack Developer for SaaS Dashboard"
+                value={jobTitle}
+                onChange={(e) => setJobTitle(e.target.value)}
+              />
               <Textarea
-                placeholder="Paste the Upwork job description here..."
+                label="Job description"
+                placeholder="Paste the full Upwork job description here..."
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
-                className="flex-1 min-h-[300px] lg:min-h-0"
+                className="min-h-[220px] flex-1"
               />
+              <p className="text-xs text-muted">
+                Starts with Hi, then Hook → Relevance → Proof → CTA with at
+                least 2 questions inside the letter.
+              </p>
               <Button
-                onClick={handleGenerate}
-                disabled={!jobDescription.trim() || generateState === "generating"}
+                onClick={() => void runGenerate()}
+                disabled={!canGenerate}
                 loading={generateState === "generating"}
                 className="w-full"
                 size="lg"
               >
                 <Sparkles className="h-4 w-4" />
-                Generate Proposal
+                Generate Winning Proposal
               </Button>
             </CardContent>
           </Card>
 
-          {/* Right - Preview */}
           <Card className="flex flex-col">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Generated Proposal</CardTitle>
-                {generateState === "complete" && (
-                  <div className="flex gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <CardTitle>Cover Letter</CardTitle>
+                {generateState === "complete" && currentProposal ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline" className="capitalize">
+                      {currentProposal.status}
+                    </Badge>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={handleRegenerate}
+                      onClick={() => {
+                        setIsEditing((value) => !value);
+                        setDraftProposal(proposal);
+                        setDraftBoldPhrases(boldPhrases);
+                      }}
                     >
-                      <RefreshCw className="h-3.5 w-3.5" />
-                      Regenerate
+                      <Pencil className="h-3.5 w-3.5" />
+                      {isEditing ? "Preview" : "Edit"}
                     </Button>
-                    <Button variant="secondary" size="sm" onClick={handleCopy}>
+                    {isEditing ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void highlightKeyPoints()}
+                          loading={highlighting}
+                        >
+                          <Bold className="h-3.5 w-3.5" />
+                          AI Bold
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => void saveEdits()}
+                          loading={savingEdit}
+                        >
+                          <Save className="h-3.5 w-3.5" />
+                          Save
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void highlightKeyPoints()}
+                          loading={highlighting}
+                        >
+                          <Bold className="h-3.5 w-3.5" />
+                          Bold Key Points
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void runGenerate(currentProposal.id)}
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          Regenerate
+                        </Button>
+                      </>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={() => void markAsSent()}>
+                      Mark Sent
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => void handleCopy()}>
                       {copied ? (
                         <Check className="h-3.5 w-3.5" />
                       ) : (
                         <Copy className="h-3.5 w-3.5" />
                       )}
-                      {copied ? "Copied!" : "Copy"}
+                      {copied ? "Copied!" : "Copy Plain Text"}
                     </Button>
                   </div>
-                )}
+                ) : null}
               </div>
             </CardHeader>
             <CardContent className="flex-1 overflow-auto">
@@ -120,29 +574,25 @@ export default function GeneratePage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="flex flex-col items-center justify-center h-full min-h-[300px] text-center"
+                    className="flex min-h-[300px] flex-col items-center justify-center text-center"
                   >
-                    <div className="h-16 w-16 rounded-2xl bg-primary-light flex items-center justify-center mb-4">
+                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-light">
                       <Sparkles className="h-8 w-8 text-primary" />
                     </div>
-                    <h3 className="text-base font-semibold text-foreground mb-2">
-                      No proposal yet
+                    <h3 className="mb-2 text-base font-semibold text-foreground">
+                      Ready when you are
                     </h3>
-                    <p className="text-sm text-muted max-w-xs">
-                      Paste a job description and click Generate to create your
-                      personalized proposal.
+                    <p className="max-w-xs text-sm text-muted">
+                      {mode === "generic"
+                        ? "Describe your background manually and generate a tailored Upwork cover letter."
+                        : "Paste a job post and generate from your active resume profile."}
                     </p>
                   </motion.div>
                 )}
 
                 {generateState === "generating" && (
-                  <motion.div
-                    key="loading"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    <AILoading />
+                  <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <AILoading message="Crafting your Upwork cover letter..." />
                   </motion.div>
                 )}
 
@@ -151,13 +601,69 @@ export default function GeneratePage() {
                     key="proposal"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4 }}
+                    className="space-y-6"
                   >
-                    <div className="prose prose-sm max-w-none">
-                      <pre className="whitespace-pre-wrap font-sans text-sm text-foreground leading-relaxed bg-transparent p-0 m-0 border-0">
-                        {proposal}
-                      </pre>
-                    </div>
+                    {isEditing ? (
+                      <CoverLetterEditor
+                        value={draftProposal}
+                        boldPhrases={draftBoldPhrases}
+                        onChange={setDraftProposal}
+                        onBoldPhrasesChange={(phrases) => {
+                          setDraftBoldPhrases(phrases);
+                          setBoldPhrases(phrases);
+                        }}
+                      />
+                    ) : (
+                      <CoverLetterPreview
+                        text={proposal}
+                        boldPhrases={boldPhrases}
+                        className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground"
+                      />
+                    )}
+
+                    {!isEditing && analysis ? (
+                      <div className="space-y-4 border-t border-border pt-4">
+                        {analysis.clientNeedsSummary ? (
+                          <div className="rounded-xl bg-primary-light/40 p-4">
+                            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+                              <Target className="h-4 w-4 text-primary" />
+                              Job analysis
+                            </div>
+                            <p className="text-sm text-muted">
+                              {analysis.clientNeedsSummary}
+                            </p>
+                          </div>
+                        ) : null}
+
+                        {analysis.matchedHighlights.length > 0 ? (
+                          <div>
+                            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+                              <Lightbulb className="h-4 w-4 text-primary" />
+                              Why you fit
+                            </div>
+                            <ul className="space-y-1 text-sm text-muted">
+                              {analysis.matchedHighlights.map((item) => (
+                                <li key={item}>• {item}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+
+                        {analysis.suggestedQuestions.length > 0 ? (
+                          <div>
+                            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+                              <MessageCircleQuestion className="h-4 w-4 text-primary" />
+                              Questions in your pitch
+                            </div>
+                            <ul className="space-y-1 text-sm text-muted">
+                              {analysis.suggestedQuestions.map((item) => (
+                                <li key={item}>• {item}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </motion.div>
                 )}
               </AnimatePresence>
