@@ -8,13 +8,13 @@ import {
   Sparkles,
   FolderOpen,
   ArrowRight,
+  LayoutTemplate,
 } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { FeatureCard } from "@/components/features/FeatureCard";
 import { PricingCard } from "@/components/features/PricingCard";
-import { TestimonialCard } from "@/components/features/TestimonialCard";
 import { HeroMockup } from "@/components/features/HeroMockup";
 import { HowItWorksStep } from "@/components/features/HowItWorksStep";
 
@@ -23,25 +23,31 @@ const features = [
     icon: FileUser,
     title: "Resume Intelligence",
     description:
-      "Upload your resume and AI extracts skills, experience, and portfolio highlights automatically.",
+      "Upload multiple resumes, pick an active profile, and let AI extract skills, experience, and projects.",
   },
   {
     icon: Search,
     title: "Job Analysis",
     description:
-      "AI understands Upwork job requirements and identifies the key skills clients are looking for.",
+      "Dedicated job analysis with required skills, client problem, advanced profile match, and gap insights.",
+  },
+  {
+    icon: LayoutTemplate,
+    title: "Proposal Templates",
+    description:
+      "Choose from standard Upwork-style templates (classic, result-led, problem-first, question-led).",
   },
   {
     icon: Sparkles,
     title: "Personalized Proposals",
     description:
-      "Generate tailored proposals based on your experience that speak directly to each job posting.",
+      "Generate tailored cover letters with match warnings, edit mode, and Upwork-safe plain-text copy.",
   },
   {
     icon: FolderOpen,
     title: "Portfolio Matching",
     description:
-      "Automatically select and highlight your most relevant projects for each proposal.",
+      "See AI-picked projects and experience ranked for each job before you write the proposal.",
   },
 ];
 
@@ -49,22 +55,22 @@ const steps = [
   {
     step: 1,
     title: "Upload Resume",
-    description: "Drop your PDF or DOCX resume and let AI do the rest.",
+    description: "Add one or more resumes and set which profile is active.",
   },
   {
     step: 2,
-    title: "AI Extracts Profile",
-    description: "Skills, experience, and projects are parsed automatically.",
+    title: "Analyze the Job",
+    description: "Paste the post on Job Analysis for skills, gaps, and portfolio picks.",
   },
   {
     step: 3,
-    title: "Paste Job Description",
-    description: "Copy the Upwork job post and paste it into the generator.",
+    title: "Pick a Template",
+    description: "Select a proposal template that fits the client and job type.",
   },
   {
     step: 4,
-    title: "Generate Proposal",
-    description: "Get a personalized, winning proposal in seconds.",
+    title: "Generate & Edit",
+    description: "Create your letter, tweak bold highlights, and copy plain text to Upwork.",
   },
 ];
 
@@ -72,64 +78,18 @@ const pricingPlans = [
   {
     name: "Free",
     price: "Free",
-    description: "Perfect for getting started",
+    description: "Everything you need to start winning jobs",
     features: [
-      "3 proposals per month",
-      "Basic resume parsing",
-      "Standard templates",
-      "Email support",
-    ],
-    cta: "Get Started Free",
-  },
-  {
-    name: "Pro",
-    price: "$19",
-    description: "For active freelancers",
-    features: [
-      "50 proposals per month",
-      "Advanced AI matching",
-      "Portfolio auto-selection",
-      "Priority support",
-      "Proposal history",
+      "3 AI proposals per month",
+      "Multi-resume profiles",
+      "Job analysis & advanced matching",
+      "Portfolio matching UI",
+      "Standard proposal templates",
+      "Proposal history, edit & regenerate",
     ],
     highlighted: true,
-    badge: "Most Popular",
-    cta: "Start Pro Trial",
-  },
-  {
-    name: "Premium",
-    price: "$49",
-    description: "For power users & agencies",
-    features: [
-      "Unlimited proposals",
-      "Custom AI tone & style",
-      "Multi-resume profiles",
-      "Analytics dashboard",
-      "Dedicated support",
-      "Team collaboration",
-    ],
-    cta: "Go Premium",
-  },
-];
-
-const testimonials = [
-  {
-    quote:
-      "ProposalAI helped me land 3 new clients in my first month. The proposals feel genuinely personal, not generic AI output.",
-    name: "Sarah Mitchell",
-    role: "Full-Stack Developer",
-  },
-  {
-    quote:
-      "I used to spend 30 minutes per proposal. Now I generate quality drafts in under 2 minutes and customize from there.",
-    name: "James Chen",
-    role: "UI/UX Designer",
-  },
-  {
-    quote:
-      "The portfolio matching feature is a game changer. It automatically picks my best projects for each job type.",
-    name: "Maria Rodriguez",
-    role: "Mobile App Developer",
+    badge: "Current plan",
+    cta: "Get Started Free",
   },
 ];
 
@@ -164,26 +124,25 @@ export default function LandingPage() {
                   AI
                 </h1>
                 <p className="text-lg text-muted leading-relaxed mb-8 max-w-lg">
-                  Upload your resume, analyze jobs, and generate personalized
-                  proposals using AI. Win more freelance contracts with less
-                  effort.
+                  Upload your resume, analyze jobs, match your portfolio, and
+                  generate personalized proposals with built-in templates.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Link href="/generate">
+                  <Link href="/signup">
                     <Button size="lg" className="w-full sm:w-auto">
-                      Start Writing Proposal
+                      Get Started Free
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
-                  <Link href="/create-profile">
+                  <Link href="/analyze">
                     <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                      Upload Resume
+                      Analyze a Job
                     </Button>
                   </Link>
                 </div>
                 <div className="flex items-center gap-6 mt-8 text-sm text-muted">
                   <span>✓ No credit card required</span>
-                  <span>✓ Free tier available</span>
+                  <span>✓ 3 proposals/month on Free</span>
                 </div>
               </motion.div>
 
@@ -200,16 +159,16 @@ export default function LandingPage() {
                 Everything you need to win jobs
               </h2>
               <p className="text-lg text-muted max-w-2xl mx-auto">
-                Powerful AI tools designed specifically for Upwork freelancers
-                who want to stand out from the competition.
+                Built for Upwork freelancers — analyze first, then generate with
+                templates and portfolio-aware AI.
               </p>
             </motion.div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
               {features.map((feature, i) => (
                 <motion.div
                   key={feature.title}
                   {...fadeUp}
-                  transition={{ duration: 0.5, delay: i * 0.1 }}
+                  transition={{ duration: 0.5, delay: i * 0.08 }}
                 >
                   <FeatureCard {...feature} />
                 </motion.div>
@@ -226,7 +185,7 @@ export default function LandingPage() {
                 How it works
               </h2>
               <p className="text-lg text-muted max-w-2xl mx-auto">
-                From resume upload to winning proposal in four simple steps.
+                From resume to analyzed job to a polished proposal in four steps.
               </p>
             </motion.div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-4">
@@ -248,13 +207,13 @@ export default function LandingPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div {...fadeUp} className="text-center mb-14">
               <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-                Simple, transparent pricing
+                Simple pricing
               </h2>
               <p className="text-lg text-muted max-w-2xl mx-auto">
-                Start free and upgrade as you grow your freelance business.
+                One free plan with the core workflow — no paid tiers or upsells yet.
               </p>
             </motion.div>
-            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto pt-4">
+            <div className="grid gap-6 max-w-md mx-auto pt-4">
               {pricingPlans.map((plan, i) => (
                 <motion.div
                   key={plan.name}
@@ -268,33 +227,8 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Testimonials */}
-        <section id="testimonials" className="py-20 lg:py-28 bg-primary-light/30">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <motion.div {...fadeUp} className="text-center mb-14">
-              <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-                Loved by freelancers
-              </h2>
-              <p className="text-lg text-muted max-w-2xl mx-auto">
-                See what freelancers are saying about ProposalAI.
-              </p>
-            </motion.div>
-            <div className="grid md:grid-cols-3 gap-6">
-              {testimonials.map((t, i) => (
-                <motion.div
-                  key={t.name}
-                  {...fadeUp}
-                  transition={{ duration: 0.5, delay: i * 0.1 }}
-                >
-                  <TestimonialCard {...t} />
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* CTA */}
-        <section className="py-20 lg:py-28">
+        <section className="py-20 lg:py-28 bg-primary-light/30">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div
               {...fadeUp}
@@ -304,8 +238,8 @@ export default function LandingPage() {
                 Ready to win more Upwork jobs?
               </h2>
               <p className="text-lg text-muted mb-8 max-w-xl mx-auto">
-                Join thousands of freelancers using AI to create proposals that
-                get responses.
+                Create your account, analyze your next job post, and generate a
+                proposal in minutes.
               </p>
               <Link href="/signup">
                 <Button size="lg">

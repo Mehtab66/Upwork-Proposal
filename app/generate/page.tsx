@@ -21,6 +21,7 @@ import {
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { CoverLetterEditor } from "@/components/proposal/CoverLetterEditor";
 import { CoverLetterPreview } from "@/components/proposal/CoverLetterPreview";
+import { MatchedPortfolioPanel } from "@/components/jobs/MatchedPortfolioPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea, Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,9 @@ import {
   plainTextForUpwork,
   sanitizeCoverLetter,
 } from "@/lib/proposal/format-cover-letter";
+import { PROPOSAL_TEMPLATES } from "@/lib/proposal/templates";
+import { readStoredJobAnalysis } from "@/lib/jobs/session";
+import type { MatchedPortfolioItem } from "@/types/job-analysis";
 import type { ResumeProfile, ResumeResponse } from "@/types/resume";
 import type {
   ProfileMatchAnalysis,
@@ -76,6 +80,23 @@ export default function GeneratePage() {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [savingEdit, setSavingEdit] = useState(false);
   const [highlighting, setHighlighting] = useState(false);
+  const [templateId, setTemplateId] = useState(PROPOSAL_TEMPLATES[0].id);
+  const [jobAnalysisAngle, setJobAnalysisAngle] = useState<string | null>(null);
+  const [matchedPortfolio, setMatchedPortfolio] = useState<
+    MatchedPortfolioItem[]
+  >([]);
+  const [fromJobAnalysis, setFromJobAnalysis] = useState(false);
+
+  useEffect(() => {
+    const stored = readStoredJobAnalysis();
+    if (!stored?.analysis) return;
+
+    setJobDescription(stored.jobDescription);
+    if (stored.clientName) setClientName(stored.clientName);
+    setJobAnalysisAngle(stored.analysis.proposalAngle || null);
+    setMatchedPortfolio(stored.analysis.matchedPortfolio || []);
+    setFromJobAnalysis(true);
+  }, []);
 
   useEffect(() => {
     async function loadContext() {
@@ -136,6 +157,17 @@ export default function GeneratePage() {
                   professionalHeadline: genericHeadline,
                   skillsSummary: genericSkills,
                   experienceSummary: genericBackground,
+                }
+              : undefined,
+          templateId,
+          jobAnalysisContext:
+            jobAnalysisAngle || matchedPortfolio.length
+              ? {
+                  proposalAngle: jobAnalysisAngle || undefined,
+                  matchedPortfolio: matchedPortfolio.map((item) => ({
+                    name: item.name,
+                    reason: item.reason,
+                  })),
                 }
               : undefined,
         }),
@@ -383,6 +415,28 @@ export default function GeneratePage() {
           <Badge variant="outline">Active resume: {activeResume.label}</Badge>
         ) : null}
 
+        {fromJobAnalysis ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary-light/30 px-4 py-3 text-sm">
+            <span>
+              Job analysis loaded — portfolio picks and proposal angle will guide
+              generation.
+            </span>
+            <Link href="/analyze">
+              <Button size="sm" variant="outline">
+                Re-analyze
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="text-sm text-muted">
+            Tip:{" "}
+            <Link href="/analyze" className="font-medium text-primary hover:underline">
+              Analyze the job first
+            </Link>{" "}
+            for advanced matching and portfolio picks.
+          </div>
+        )}
+
         {usageRemaining !== null ? (
           <Badge variant="primary">
             {usageRemaining} of {usageLimit} proposals left this month
@@ -465,6 +519,22 @@ export default function GeneratePage() {
                 value={jobTitle}
                 onChange={(e) => setJobTitle(e.target.value)}
               />
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground">
+                  Proposal template
+                </label>
+                <select
+                  value={templateId}
+                  onChange={(e) => setTemplateId(e.target.value)}
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  {PROPOSAL_TEMPLATES.map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.name} — {template.description}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <Textarea
                 label="Job description"
                 placeholder="Paste the full Upwork job description here..."
@@ -670,6 +740,10 @@ export default function GeneratePage() {
             </CardContent>
           </Card>
         </div>
+
+        {matchedPortfolio.length > 0 ? (
+          <MatchedPortfolioPanel items={matchedPortfolio} />
+        ) : null}
       </div>
     </DashboardLayout>
   );

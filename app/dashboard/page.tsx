@@ -10,6 +10,7 @@ import {
   FileText,
   Sparkles,
   ArrowRight,
+  Search,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { StatsCard } from "@/components/dashboard/StatsCard";
@@ -120,7 +121,20 @@ export default function DashboardPage() {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <Link href="/analyze">
+                  <div className="glass rounded-xl p-5 border border-border hover:border-primary/30 transition-all cursor-pointer group glass-hover">
+                    <div className="h-10 w-10 rounded-xl bg-primary-light flex items-center justify-center mb-3 group-hover:bg-primary transition-colors">
+                      <Search className="h-5 w-5 text-primary group-hover:text-white transition-colors" />
+                    </div>
+                    <h3 className="font-semibold text-foreground mb-1">
+                      Analyze Job
+                    </h3>
+                    <p className="text-xs text-muted">
+                      Skills, gaps, and portfolio picks before you write
+                    </p>
+                  </div>
+                </Link>
                 <Link href="/generate">
                   <div className="glass rounded-xl p-5 border border-border hover:border-primary/30 transition-all cursor-pointer group glass-hover">
                     <div className="h-10 w-10 rounded-xl bg-primary-light flex items-center justify-center mb-3 group-hover:bg-primary transition-colors">

@@ -3,6 +3,8 @@ import clientPromise from "@/lib/mongodb";
 import { sendEmail } from "@/lib/email/mailer";
 import { createAndSendOtpRecord } from "@/lib/email/otp";
 import { buildPasswordResetOtpEmail } from "@/lib/email/templates";
+import { assertAuthEmailRateLimit } from "@/lib/rate-limit";
+import { rateLimitJsonResponse } from "@/lib/auth/rate-limit-response";
 
 export async function POST(request: Request) {
   try {
@@ -13,6 +15,19 @@ export async function POST(request: Request) {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+
+    try {
+      await assertAuthEmailRateLimit(
+        request,
+        "auth:forgot-password",
+        normalizedEmail
+      );
+    } catch (rateError) {
+      const limited = rateLimitJsonResponse(rateError);
+      if (limited) return limited;
+      throw rateError;
+    }
+
     const client = await clientPromise;
     const user = await client
       .db()

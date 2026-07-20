@@ -10,7 +10,37 @@ import type {
   GenericProposalProfile,
   ProfileMatchAnalysis,
 } from "@/types/proposal";
+import { getProposalTemplate } from "@/lib/proposal/templates";
 import type { ResumeProfile } from "@/types/resume";
+import type { MatchedPortfolioItem } from "@/types/job-analysis";
+
+export interface ProposalGenerationOptions {
+  templateId?: string;
+  jobAnalysisContext?: {
+    proposalAngle?: string;
+    matchedPortfolio?: Pick<MatchedPortfolioItem, "name" | "reason">[];
+  };
+}
+
+function buildPromptExtras(options?: ProposalGenerationOptions) {
+  const template = getProposalTemplate(options?.templateId);
+  let extra = `\nPROPOSAL TEMPLATE (${template.name}):\n${template.promptAddon}\n`;
+
+  const angle = options?.jobAnalysisContext?.proposalAngle?.trim();
+  if (angle) {
+    extra += `\nJOB ANALYSIS — USE THIS ANGLE:\n${angle}\n`;
+  }
+
+  const picks = options?.jobAnalysisContext?.matchedPortfolio;
+  if (picks?.length) {
+    extra += `\nPORTFOLIO ITEMS TO LEAD WITH (only if accurate):\n`;
+    for (const item of picks) {
+      extra += `- ${item.name}: ${item.reason}\n`;
+    }
+  }
+
+  return extra;
+}
 
 const SHARED_JSON_SHAPE = `Return valid JSON with this exact shape:
 {
@@ -164,6 +194,7 @@ export async function generateUpworkProposalFromResume(input: {
   upworkProfileUrl: string;
   clientName?: string;
   jobTitleHint?: string;
+  options?: ProposalGenerationOptions;
 }) {
   const resumeJson = compactResumeForPrompt(input.resume.extracted);
 
@@ -195,7 +226,8 @@ UPWORK PROFILE URL:
 ${input.upworkProfileUrl || "Not provided"}
 
 FREELANCER RESUME PROFILE (only use facts from here):
-${resumeJson}`;
+${resumeJson}
+${buildPromptExtras(input.options)}`;
 
   return callProposalModel(systemPrompt, userPrompt, input.clientName);
 }
@@ -206,6 +238,7 @@ export async function generateGenericUpworkProposal(input: {
   upworkProfileUrl: string;
   clientName?: string;
   jobTitleHint?: string;
+  options?: ProposalGenerationOptions;
 }) {
   const systemPrompt = `You are an expert Upwork proposal writer.
 ${PROPOSAL_RULES}
@@ -234,7 +267,8 @@ Skills: ${input.profile.skillsSummary || "Not provided"}
 Background: ${input.profile.experienceSummary || "Not provided"}
 
 UPWORK PROFILE URL:
-${input.upworkProfileUrl || "Not provided"}`;
+${input.upworkProfileUrl || "Not provided"}
+${buildPromptExtras(input.options)}`;
 
   return callProposalModel(systemPrompt, userPrompt, input.clientName);
 }

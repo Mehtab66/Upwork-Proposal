@@ -3,6 +3,8 @@ import clientPromise from "@/lib/mongodb";
 import { sendEmail } from "@/lib/email/mailer";
 import { verifyOtp } from "@/lib/email/otp";
 import { buildWelcomeEmail } from "@/lib/email/templates";
+import { assertAuthEmailRateLimit } from "@/lib/rate-limit";
+import { rateLimitJsonResponse } from "@/lib/auth/rate-limit-response";
 
 export async function POST(request: Request) {
   try {
@@ -16,6 +18,20 @@ export async function POST(request: Request) {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+
+    try {
+      await assertAuthEmailRateLimit(
+        request,
+        "auth:register:verify",
+        normalizedEmail,
+        12
+      );
+    } catch (rateError) {
+      const limited = rateLimitJsonResponse(rateError);
+      if (limited) return limited;
+      throw rateError;
+    }
+
     const verification = await verifyOtp({
       email: normalizedEmail,
       purpose: "signup",

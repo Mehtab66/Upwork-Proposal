@@ -10,6 +10,7 @@ import {
   Sparkles,
   History,
   Settings,
+  Search,
   X,
   LogOut,
 } from "lucide-react";
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 const menuItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/create-profile", label: "Resume Profile", icon: FileUser },
+  { href: "/analyze", label: "Job Analysis", icon: Search },
   { href: "/generate", label: "Generate Proposal", icon: Sparkles },
   { href: "/history", label: "Proposal History", icon: History },
   { href: "/settings", label: "Settings", icon: Settings },

@@ -13,10 +13,10 @@ export async function extractTextFromResume(
     mimeType === "application/pdf" ||
     lowerName.endsWith(".pdf")
   ) {
-    const { PDFParse } = await import("pdf-parse");
-    const parser = new PDFParse({ data: buffer });
-    const result = await parser.getText();
-    await parser.destroy();
+    const pdfParse = (await import("pdf-parse")).default as (
+      data: Buffer
+    ) => Promise<{ text: string }>;
+    const result = await pdfParse(buffer);
     return normalizeText(result.text);
   }
 

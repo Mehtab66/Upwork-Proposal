@@ -37,8 +37,9 @@ export default function SignupPage() {
         <ul className="space-y-3 text-sm text-muted">
           {[
             "Free tier with 3 proposals/month",
+            "Job analysis & portfolio matching",
+            "Standard proposal templates",
             "No credit card required",
-            "Cancel anytime",
           ].map((item) => (
             <li key={item} className="flex items-center gap-2">
               <span className="h-5 w-5 rounded-full bg-primary-light text-primary flex items-center justify-center text-xs font-bold">

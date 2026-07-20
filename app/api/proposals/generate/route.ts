@@ -31,6 +31,11 @@ export async function POST(request: Request) {
       regenerateProposalId?: string;
       mode?: ProposalMode;
       genericProfile?: Partial<GenericProposalProfile>;
+      templateId?: string;
+      jobAnalysisContext?: {
+        proposalAngle?: string;
+        matchedPortfolio?: { name: string; reason: string }[];
+      };
     };
 
     const jobDescription = body.jobDescription?.trim() || "";
@@ -68,6 +73,10 @@ export async function POST(request: Request) {
       );
 
     const upworkProfileUrl = String(dbUser?.upworkProfileUrl || "");
+    const generationOptions = {
+      templateId: body.templateId,
+      jobAnalysisContext: body.jobAnalysisContext,
+    };
     let generated;
     let resumeId: string | null = null;
     let resumeLabel: string | null = null;
@@ -105,6 +114,7 @@ export async function POST(request: Request) {
         upworkProfileUrl,
         clientName: body.clientName,
         jobTitleHint: body.jobTitle,
+        options: generationOptions,
       });
     } else {
       const resumeState = await getUserResumeState(user.id);
@@ -132,6 +142,7 @@ export async function POST(request: Request) {
         upworkProfileUrl,
         clientName: body.clientName,
         jobTitleHint: body.jobTitle,
+        options: generationOptions,
       });
     }
 

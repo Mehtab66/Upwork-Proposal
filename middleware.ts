@@ -13,5 +13,6 @@ export const config = {
     "/history/:path*",
     "/settings/:path*",
     "/create-profile/:path*",
+    "/analyze/:path*",
   ],
 };
