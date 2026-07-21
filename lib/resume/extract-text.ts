@@ -1,4 +1,5 @@
 import mammoth from "mammoth";
+import { extractPdfText } from "@/lib/resume/extract-pdf-text";
 
 const MAX_TEXT_LENGTH = 30000;
 
@@ -13,11 +14,7 @@ export async function extractTextFromResume(
     mimeType === "application/pdf" ||
     lowerName.endsWith(".pdf")
   ) {
-    const pdfParse = (await import("pdf-parse")).default as (
-      data: Buffer
-    ) => Promise<{ text: string }>;
-    const result = await pdfParse(buffer);
-    return normalizeText(result.text);
+    return normalizeText(await extractPdfText(buffer));
   }
 
   if (
