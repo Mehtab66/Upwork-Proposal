@@ -6,12 +6,13 @@ const footerLinks = {
     { label: "Features", href: "#features" },
     { label: "Pricing", href: "#pricing" },
     { label: "How It Works", href: "#how-it-works" },
+    { label: "Blog", href: "/blog" },
     { label: "Sign up", href: "/signup" },
     { label: "Log in", href: "/login" },
   ],
   Legal: [
-    { label: "Privacy Policy", href: "#" },
-    { label: "Terms of Service", href: "#" },
+    { label: "Privacy Policy", href: "/privacy" },
+    { label: "Terms of Service", href: "/terms" },
   ],
 };
 
@@ -72,9 +73,14 @@ export function Footer() {
           <p className="text-sm text-muted">
             © {new Date().getFullYear()} ProposalAI. All rights reserved.
           </p>
-          <p className="text-sm text-muted">
-            Built for freelancers who want to win more Upwork jobs.
-          </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-muted">
+            <Link href="/privacy" className="hover:text-primary transition-colors">
+              Privacy
+            </Link>
+            <Link href="/terms" className="hover:text-primary transition-colors">
+              Terms
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

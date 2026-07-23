@@ -221,6 +221,18 @@ export function SignupForm() {
             {loading ? "Sending code..." : "Continue with Email"}
           </Button>
 
+          <p className="text-xs text-center text-muted leading-relaxed">
+            By continuing, you agree to our{" "}
+            <Link href="/terms" className="text-primary hover:underline">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="text-primary hover:underline">
+              Privacy Policy
+            </Link>
+            .
+          </p>
+
           <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-border" />
