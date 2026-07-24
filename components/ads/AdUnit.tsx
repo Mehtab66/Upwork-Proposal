@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { ADSENSE_CLIENT } from "@/components/ads/AdSenseScript";
+import { ADSENSE_CLIENT, ADSENSE_SLOT } from "@/lib/ads/config";
 
 declare global {
   interface Window {
@@ -21,11 +21,10 @@ export function AdUnit({
   format = "auto",
 }: AdUnitProps) {
   const pushed = useRef(false);
-  const adSlot =
-    slot?.trim() || process.env.NEXT_PUBLIC_ADSENSE_SLOT?.trim() || "";
+  const adSlot = slot?.trim() || ADSENSE_SLOT;
 
   useEffect(() => {
-    if (!ADSENSE_CLIENT || pushed.current) {
+    if (!ADSENSE_CLIENT || !adSlot || pushed.current) {
       return;
     }
 
@@ -36,30 +35,22 @@ export function AdUnit({
     } catch (error) {
       console.warn("AdSense push failed:", error);
     }
-  }, []);
+  }, [adSlot]);
 
-  if (!ADSENSE_CLIENT) {
+  if (!ADSENSE_CLIENT || !adSlot) {
     return null;
   }
 
   return (
     <div className={className}>
-      {adSlot ? (
-        <ins
-          className="adsbygoogle"
-          style={{ display: "block", minHeight: 100, width: "100%" }}
-          data-ad-client={ADSENSE_CLIENT}
-          data-ad-slot={adSlot}
-          data-ad-format={format}
-          data-full-width-responsive="true"
-        />
-      ) : (
-        <div className="flex min-h-[120px] w-full items-center justify-center rounded-xl border border-dashed border-border bg-muted/20 px-4 text-center text-xs text-muted">
-          Ad space — add{" "}
-          <code className="mx-1">NEXT_PUBLIC_ADSENSE_SLOT</code> in env for a
-          display unit (Auto ads still load from the site script).
-        </div>
-      )}
+      <ins
+        className="adsbygoogle"
+        style={{ display: "block", minHeight: 120, width: "100%" }}
+        data-ad-client={ADSENSE_CLIENT}
+        data-ad-slot={adSlot}
+        data-ad-format={format}
+        data-full-width-responsive="true"
+      />
     </div>
   );
 }

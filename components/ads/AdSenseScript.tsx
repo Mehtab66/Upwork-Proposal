@@ -1,8 +1,5 @@
 import Script from "next/script";
-
-export const ADSENSE_CLIENT =
-  process.env.NEXT_PUBLIC_ADSENSE_CLIENT?.trim() ||
-  "ca-pub-9021169824928895";
+import { ADSENSE_CLIENT } from "@/lib/ads/config";
 
 export function AdSenseScript() {
   if (!ADSENSE_CLIENT) {
