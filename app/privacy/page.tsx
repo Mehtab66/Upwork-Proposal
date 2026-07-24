@@ -116,6 +116,11 @@ export default function PrivacyPolicyPage() {
             <strong>Payment processors</strong> when you subscribe to paid plans;
           </li>
           <li>
+            <strong>Advertising partners</strong> (Google AdSense) to show ads,
+            including after proposal generation. Google may use cookies or similar
+            technologies per their policies;
+          </li>
+          <li>
             <strong>Legal and safety</strong> when required by law or to protect
             rights, safety, and integrity of the Service.
           </li>

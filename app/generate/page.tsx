@@ -22,6 +22,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { CoverLetterEditor } from "@/components/proposal/CoverLetterEditor";
 import { CoverLetterPreview } from "@/components/proposal/CoverLetterPreview";
 import { MatchedPortfolioPanel } from "@/components/jobs/MatchedPortfolioPanel";
+import { ProposalAdGate } from "@/components/ads/ProposalAdGate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea, Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,7 @@ import type {
   StoredProposal,
 } from "@/types/proposal";
 
-type GenerateState = "idle" | "generating" | "complete";
+type GenerateState = "idle" | "generating" | "ad" | "complete";
 
 interface ProposalAnalysis {
   clientNeedsSummary: string;
@@ -204,7 +205,8 @@ export default function GeneratePage() {
         boldPhrases: phrases,
       });
       setAnalysis(data.analysis || null);
-      setGenerateState("complete");
+      // Show AdSense gate before revealing the proposal
+      setGenerateState("ad");
 
       if (data.usage) {
         setUsageRemaining(data.usage.remaining);
@@ -663,6 +665,19 @@ export default function GeneratePage() {
                 {generateState === "generating" && (
                   <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                     <AILoading message="Crafting your Upwork cover letter..." />
+                  </motion.div>
+                )}
+
+                {generateState === "ad" && (
+                  <motion.div
+                    key="ad-gate"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <ProposalAdGate
+                      onContinue={() => setGenerateState("complete")}
+                    />
                   </motion.div>
                 )}
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Sparkles, Share2, Globe, Mail } from "lucide-react";
+import { Sparkles, Mail } from "lucide-react";
 
 const footerLinks = {
   Product: [
@@ -35,16 +35,13 @@ export function Footer() {
               analyze jobs, and create personalized proposals that win clients.
             </p>
             <div className="flex gap-3 mt-6">
-              {[Share2, Globe, Mail].map((Icon, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  className="h-9 w-9 rounded-xl glass flex items-center justify-center text-muted hover:text-primary hover:border-primary/30 transition-all glass-hover"
-                  aria-label="Social link"
-                >
-                  <Icon className="h-4 w-4" />
-                </a>
-              ))}
+              <a
+                href="mailto:support@upworkproposl.pro"
+                className="h-9 w-9 rounded-xl glass flex items-center justify-center text-muted hover:text-primary hover:border-primary/30 transition-all glass-hover"
+                aria-label="Email support"
+              >
+                <Mail className="h-4 w-4" />
+              </a>
             </div>
           </div>
 
